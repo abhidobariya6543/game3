@@ -1,0 +1,3190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script language="javascript">
+
+	defaultFSStyle = "Rows";
+	gErrorCnt = 0;
+	launchPage = "";
+
+	fInitScormComm("");
+var jsonData = '{"lastYear":{"MarketShare":4000,"GrossSales":4000,"NetSales":4000,"Profit":4000},"thisYear":{"MarketShare":4000,"GrossSales":4000,"NetSales":4000,"Profit":4000},"variance":{"MarketShare":0,"GrossSales":0,"NetSales":0,"Profit":0}}';
+
+	function fInitScormComm(lPath){
+
+		if (lPath==""){
+			fBlankSlate();
+		}
+
+		if (lPath!=""){
+			frmContent.location.replace('about:blank');
+			setTimeout(function(){
+
+				fBlankSlate();
+				if (API_1484_11.datamodel["cmi.entry"] != "resume"){
+
+					// CLEAN UP ALL DATA IF NOT SUSPENDED
+					fResetAPIObjectData();
+					// Reference - http://stackoverflow.com/questions/5726638/what-is-the-change-that-happens-on-lms-when-cmi-exit-is-changed-from-suspend-to
+
+				}
+
+				//frmContent.location.replace(lPath);
+				window.open(lPath)
+			}, 500);
+		}
+	}
+
+	function testerFrameLoaded(){
+		fShowSnapShot();
+		frmScormLog.document.getElementById("DataReceived").innerHTML+= navigator.userAgent + ' - ' + '<br><br>';
+		if (navigator.appName == "Microsoft Internet Explorer"){
+			frmScormLog.document.getElementById("DataReceived").innerHTML+= 'IE Document Mode - ' + document.documentMode + '<br><br>';
+		}
+		var StartSessionDt = new Date();
+		frmScormLog.document.getElementById("DataReceived").innerHTML+= StartSessionDt.toString() + '<br><br>';
+
+		//frmContent.location.replace(launchPage);
+		window.open(launchPage)
+
+
+	}
+
+	function testerFrameResized(){
+
+		var objDataReceived = frmScormLog.document.getElementById("DataReceived");
+		if (defaultFSStyle == "Rows"){
+			objDataReceived.style.left = "250px";
+			objDataReceived.style.top = "0px";
+			objDataReceived.style.width = (frmScormLog.document.body.clientWidth - 250);
+			objDataReceived.style.height = (frmScormLog.document.body.clientHeight);
+		}else{
+			objDataReceived.style.left = "10px";
+			objDataReceived.style.top = "150px";
+			objDataReceived.style.width = (frmScormLog.document.body.clientWidth - 20);
+			objDataReceived.style.height = (frmScormLog.document.body.clientHeight - 150);
+		}
+
+	}
+
+	function fChangeLayout(){
+
+		var myFrameset = document.getElementById("stFrameSet");
+		if (defaultFSStyle == "Rows"){
+			myFrameset.setAttribute("rows", "");
+			myFrameset.removeAttribute("rows");
+			myFrameset.setAttribute("cols", "25%,75%");
+			defaultFSStyle = "Cols";
+
+		}else{
+			myFrameset.setAttribute("cols", "");
+			myFrameset.removeAttribute("cols");
+			myFrameset.setAttribute("rows", "25%,75%");
+			defaultFSStyle = "Rows";
+		}
+
+
+	}
+
+	function fBlankSlate(){
+		gLMSInitializeCalled = false;
+		gLMSFinishCalled = false;
+
+		gStrLastErrorNum = "0";
+	}
+
+	function fResetError(){
+		gStrLastErrorNum = "0";
+	}
+
+	function fErrorOccured(lErrorStr){
+		gErrorCnt++;
+		var objDataReceived = frmScormLog.document.getElementById("DataReceived");
+		objDataReceived.innerHTML+= '<span style="color:#A30000">' + lErrorStr + '</span><br>';
+		objDataReceived.scrollTop = objDataReceived.scrollHeight;
+
+	}
+
+	function fNormalCall(lStr){
+		var objDataReceived = frmScormLog.document.getElementById("DataReceived");
+		objDataReceived.innerHTML+= '<span style="color:#008000">' + lStr + '</span><br>';
+		objDataReceived.scrollTop = objDataReceived.scrollHeight;
+	}
+
+	function fWarningCall(lStr){
+		var objDataReceived = frmScormLog.document.getElementById("DataReceived");
+		objDataReceived.innerHTML+= '<span style="color:#F59F00">' + lStr + '</span><br>';
+		objDataReceived.scrollTop = objDataReceived.scrollHeight;
+	}
+
+	function fShowSnapShot(){
+		var strTable = '';
+		strTable += '<table border="1" style="border-collapse: collapse;">';
+		strTable += '<tr><td>completion_status</td><td>'+API_1484_11.datamodel["cmi.completion_status"]+'</td></tr>';
+		strTable += '<tr><td>success_status</td><td>'+API_1484_11.datamodel["cmi.success_status"]+'</td></tr>';
+		strTable += '<tr><td>score.raw</td><td>'+API_1484_11.datamodel["cmi.score.raw"]+'</td></tr>';
+		if (API_1484_11.datamodel["cmi.location"] == "svtdefault"){
+			strTable += '<tr><td>location</td><td></td></tr>';
+		}else{
+			strTable += '<tr><td>location</td><td>'+API_1484_11.datamodel["cmi.location"]+'</td></tr>';
+		}
+		strTable += '<tr><td>Error Count</td><td>'+gErrorCnt+'</td></tr>';
+
+		strTable += '</table>';
+		frmScormLog.document.getElementById("dataSnapshot").innerHTML= strTable;
+	}
+
+	function hasDuplicates(array) {
+		var valuesSoFar = Object.create(null);
+		for (var i = 0; i < array.length; ++i) {
+			var value = array[i];
+			if (value in valuesSoFar) {
+				return true;
+			}
+			valuesSoFar[value] = true;
+		}
+		return false;
+	}
+
+
+	function DLConvertMilliSecondsIntoSCORM2004Time(intTotalMilliseconds){
+
+		var ScormTime = "";
+
+		var HundredthsOfASecond;
+
+		var Seconds;	// 100 hundreths of a seconds
+		var Minutes;	// 60 seconds
+		var Hours;		// 60 minutes
+		var Days;		// 24 hours
+		var Months;		// 30 days
+		var Years;		// 12 months
+
+		var HUNDREDTHS_PER_SECOND = 100;
+		var HUNDREDTHS_PER_MINUTE = HUNDREDTHS_PER_SECOND * 60;
+		var HUNDREDTHS_PER_HOUR   = HUNDREDTHS_PER_MINUTE * 60;
+		var HUNDREDTHS_PER_DAY    = HUNDREDTHS_PER_HOUR * 24;
+		var HUNDREDTHS_PER_MONTH  = HUNDREDTHS_PER_DAY * 30;
+		var HUNDREDTHS_PER_YEAR   = HUNDREDTHS_PER_MONTH * 12;
+
+
+		HundredthsOfASecond = Math.floor(intTotalMilliseconds / 10);
+
+		Years = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_YEAR);
+		HundredthsOfASecond -= (Years * HUNDREDTHS_PER_YEAR);
+
+		Months = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_MONTH);
+		HundredthsOfASecond -= (Months * HUNDREDTHS_PER_MONTH);
+
+		Days = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_DAY);
+		HundredthsOfASecond -= (Days * HUNDREDTHS_PER_DAY);
+
+		Hours = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_HOUR);
+		HundredthsOfASecond -= (Hours * HUNDREDTHS_PER_HOUR);
+
+		Minutes = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_MINUTE);
+		HundredthsOfASecond -= (Minutes * HUNDREDTHS_PER_MINUTE);
+
+		Seconds = Math.floor(HundredthsOfASecond / HUNDREDTHS_PER_SECOND);
+		HundredthsOfASecond -= (Seconds * HUNDREDTHS_PER_SECOND);
+
+
+		if (Years > 0) {
+			ScormTime += Years + "Y";
+		}
+		if (Months > 0){
+			ScormTime += Months + "M";
+		}
+		if (Days > 0){
+			ScormTime += Days + "D";
+		}
+
+		if ((HundredthsOfASecond + Seconds + Minutes + Hours) > 0 ){
+
+			ScormTime += "T";
+
+			if (Hours > 0){
+				ScormTime += Hours + "H";
+			}
+
+			if (Minutes > 0){
+				ScormTime += Minutes + "M";
+			}
+
+			if ((HundredthsOfASecond + Seconds) > 0){
+				ScormTime += Seconds;
+
+				if (HundredthsOfASecond > 0){
+					ScormTime += "." + HundredthsOfASecond;
+				}
+
+				ScormTime += "S";
+			}
+
+		}
+
+
+		if (ScormTime == ""){
+			ScormTime = "0S";
+		}
+
+		ScormTime = "P" + ScormTime;
+
+
+		return ScormTime;
+	}
+
+	errorCodes = new Array();
+	errorCodes.push({errCode:"0", errDesc:"No error"});
+	errorCodes.push({errCode:"101", errDesc:"General Exception"});
+	errorCodes.push({errCode:"103", errDesc:"Already Initialized"});
+	errorCodes.push({errCode:"112", errDesc:"Termination Before Initialization"});
+	errorCodes.push({errCode:"113", errDesc:"Termination After Termination"});
+	errorCodes.push({errCode:"122", errDesc:"Retrieve Data Before Initialization"});
+	errorCodes.push({errCode:"123", errDesc:"Retrieve Data After Termination"});
+	errorCodes.push({errCode:"132", errDesc:"Store Data Before Initialization"});
+	errorCodes.push({errCode:"133", errDesc:"Store Data After Termination"});
+	errorCodes.push({errCode:"142", errDesc:"Commit Before Initialization"});
+	errorCodes.push({errCode:"143", errDesc:"Commit After Termination"});
+	errorCodes.push({errCode:"201", errDesc:"General Argument Error"});
+	errorCodes.push({errCode:"202", errDesc:"Element cannot have children"});
+	errorCodes.push({errCode:"203", errDesc:"Element not an error. Cannot have count"});
+	errorCodes.push({errCode:"301", errDesc:"General Get Failure"});
+	errorCodes.push({errCode:"351", errDesc:"General Set Failure"});
+	errorCodes.push({errCode:"401", errDesc:"Undefined Data Model Element"});
+	errorCodes.push({errCode:"402", errDesc:"Invalid set value, element is a keyword"});
+	errorCodes.push({errCode:"403", errDesc:"Data Model Element Value Not Initialized"});
+	errorCodes.push({errCode:"404", errDesc:"Data Model Element Is Read Only"});
+	errorCodes.push({errCode:"405", errDesc:"Data Model Element Is Write Only"});
+	errorCodes.push({errCode:"406", errDesc:"Data Model Element Type Mismatch"});
+	errorCodes.push({errCode:"407", errDesc:"Data Model Element Value Out Of Range"});
+	errorCodes.push({errCode:"408", errDesc:"Data Model Dependency Not Established"});
+
+
+	API_1484_11 = new Object()
+
+	function fGetDataFromLMS(){
+		// GET DATA FROM LMS
+	}
+
+	function fResetAPIObjectData(){
+		API_1484_11.datamodel = new Array()
+		API_1484_11.datamodel["cmi._version"] = "1.0";
+		API_1484_11.datamodel["cmi.comments_from_learner._children"] = "comment,location,timestamp";
+		API_1484_11.datamodel.cmi_comments_from_learner = new Array();
+		API_1484_11.datamodel["cmi.comments_from_lms._children"] = "comment,location,timestamp";
+		API_1484_11.datamodel["cmi.completion_status"] = "unknown";
+		API_1484_11.datamodel["cmi.completion_threshold"] = ""; // TO BE FETCHED FROM IMSMANIFEST
+		API_1484_11.datamodel["cmi.progress_measure"] = "";
+		API_1484_11.datamodel["cmi.credit"] = "credit";
+		API_1484_11.datamodel["cmi.entry"] = "ab-initio";
+		API_1484_11.datamodel["cmi.exit"] = "";
+		API_1484_11.datamodel["cmi.interactions._children"] = "id,type,objectives,timestamp,correct_responses,weighting,learner_response,result,latency,description";
+		API_1484_11.datamodel.cmi_interactions = new Array();
+		API_1484_11.datamodel["cmi.launch_data"] = "svtdefault"; // TO BE FETCHED FROM IMSMANIFEST <adlcp:dataFromLMS>, If this is not available in the manifest, set default value as "svtdefault"
+		API_1484_11.datamodel["cmi.learner_id"] = "Joe_Student1";// IF POSSIBLE GET USER ID FROM LMS HERE
+		API_1484_11.datamodel["cmi.learner_name"] = "Student, Joseph Abc,";// IF POSSIBLE GET USER NAME FROM LMS HERE
+		API_1484_11.datamodel["cmi.learner_preference._children"] = "audio_level,language,delivery_speed,audio_captioning";
+		API_1484_11.datamodel["cmi.learner_preference.audio_level"] = "1";
+		API_1484_11.datamodel["cmi.learner_preference.language"] = "";
+		API_1484_11.datamodel["cmi.learner_preference.delivery_speed"] = "1";
+		API_1484_11.datamodel["cmi.learner_preference.audio_captioning"] = "0";
+		API_1484_11.datamodel["cmi.location"] = "svtdefault";
+		API_1484_11.datamodel["cmi.max_time_allowed"] = "svtdefault"; // TO BE FETCHED FROM IMSMANIFEST imsss:attemptAbsoluteDurationLimit attribute of <imsss:limitConditions>. If this is not available in the manifest, set default value as "svtdefault"
+		API_1484_11.datamodel["cmi.mode"] = "normal";
+		API_1484_11.datamodel["cmi.objectives._children"] = "id,score,success_status,completion_status,progress_measure,description";
+		API_1484_11.datamodel.cmi_objectives = new Array(); // TO BE FETCHED FROM IMSMANIFEST <imsss:objectives>
+		API_1484_11.datamodel["cmi.scaled_passing_score"] = ""; // TO BE FETCHED FROM IMSMANIFEST
+		API_1484_11.datamodel["cmi.score._children"] = "scaled,min,max,raw";
+		API_1484_11.datamodel["cmi.score.scaled"] = "";
+		API_1484_11.datamodel["cmi.score.raw"] = "";
+		API_1484_11.datamodel["cmi.score.max"] = "";
+		API_1484_11.datamodel["cmi.score.min"] = "";
+		API_1484_11.datamodel["cmi.session_time"] = "";
+		API_1484_11.datamodel.cmi_session_time_overall= 0
+		API_1484_11.datamodel.cmi_session_time_calculated= 0
+		API_1484_11.datamodel["cmi.success_status"] = "unknown";
+		API_1484_11.datamodel["cmi.suspend_data"] = "svtdefault";
+		API_1484_11.datamodel["cmi.time_limit_action"] = "continue,no message"; // TO BE FETCHED FROM IMSMANIFEST <adlcp:timeLimitAction>, If this is not available in the manifest, set default value as "continue,no message"
+		API_1484_11.datamodel["cmi.total_time"] = "PT0S";
+		API_1484_11.datamodel["adl.data._children"] = "id,store";
+		API_1484_11.datamodel["adl.data._count"] = "0";
+		API_1484_11.datamodel["adl.nav.request"] = "_none_";
+
+	}
+
+	fResetAPIObjectData()
+	fGetDataFromLMS()
+	if ((API_1484_11.datamodel["cmi.entry"] != "resume") && (API_1484_11.datamodel["adl.nav.request"] != "suspendAll")){
+
+		// CLEAN UP ALL DATA IF NOT SUSPENDED
+		fResetAPIObjectData();
+		// Reference - http://stackoverflow.com/questions/5726638/what-is-the-change-that-happens-on-lms-when-cmi-exit-is-changed-from-suspend-to
+
+	}
+
+	if (API_1484_11.datamodel.cmi_session_time_overall != 0){
+		API_1484_11.datamodel["cmi.total_time"] = DLConvertMilliSecondsIntoSCORM2004Time(API_1484_11.datamodel.cmi_session_time_overall);
+	}
+	API_1484_11.datamodel.cmi_session_time_calculated= 0;
+
+
+	API_1484_11.Initialize = function(lStr){
+		fShowSnapShot();
+		if (lStr != ""){
+			fErrorOccured('Initialize("' + lStr + '") - ' + '201|General Argument Error');
+			gStrLastErrorNum = "201";
+			return "false";
+		}
+
+		if (gLMSInitializeCalled){
+
+			fErrorOccured('Initialize("' + lStr + '") - ' + '103|Already Initialized');
+			gStrLastErrorNum = "103";
+			return "false";
+		}
+
+		gLMSInitializeCalled = true;
+		fNormalCall('Initialize("")');
+		fResetError();
+		return "true";
+	}
+
+	API_1484_11.SetValue = function(lStr,lVal){
+
+
+		if (!gLMSInitializeCalled){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '132|Store Data Before Initialization');
+			gStrLastErrorNum = "132";
+			return "false"
+		}
+
+		if (gLMSFinishCalled){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '133|Store Data After Termination');
+			gStrLastErrorNum = "133";
+			return "false"
+		}
+
+		if (lStr == "cmi._version"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.comments_from_learner._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.comments_from_learner._count"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.lastIndexOf(".comment") > 10)){
+
+			var lValForSPM = lVal;
+			if(typeof(lVal)=="string"){
+				if (lVal.indexOf("{lang=") != -1){
+					lValCBArr = lVal.split("}");
+					lValForSPMArr = new Array();
+					for (var k=1;k<lValCBArr.length;k++){
+						lValForSPMArr.push(lValCBArr[k])
+					}
+					lValForSPM = lValForSPMArr.join("}")
+				}
+			}
+
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lValForSPM.length > 4000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue] == undefined){
+						var lObj =  new Object();
+						lObj.comment = lVal;
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue] = lObj;
+					}else{
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue].comment = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.indexOf(".location") != -1)){
+
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 250){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue] == undefined){
+						var lObj =  new Object();
+						lObj.location = lVal;
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue] = lObj;
+					}else{
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue].location = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.indexOf(".timestamp") != -1)){
+
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue] == undefined){
+						var lObj =  new Object();
+						lObj.timestamp = lVal;
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue] = lObj;
+					}else{
+						API_1484_11.datamodel.cmi_comments_from_learner[nValue].timestamp = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if (lStr == "cmi.comments_from_lms._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.comments_from_lms._count"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.lastIndexOf(".comment") > 10)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.indexOf(".location") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.indexOf(".timestamp") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.completion_status"){
+			var lAllowedVoc = new Array();
+			lAllowedVoc[lAllowedVoc.length] = "completed";
+			lAllowedVoc[lAllowedVoc.length] = "incomplete";
+			lAllowedVoc[lAllowedVoc.length] = "not attempted";
+			lAllowedVoc[lAllowedVoc.length] = "unknown";
+
+			var bExists = false;
+			for (var i=0;i<lAllowedVoc.length;i++){
+				if (lAllowedVoc[i] == lVal){
+					bExists = true;
+				}
+			}
+
+			if (!bExists){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			if (API_1484_11.datamodel["cmi.completion_threshold"] != ""){
+				if (API_1484_11.datamodel["cmi.progress_measure"] != ""){
+
+					if ( Number(API_1484_11.datamodel["cmi.completion_threshold"]) > Number(API_1484_11.datamodel["cmi.progress_measure"])){
+						API_1484_11.datamodel["cmi.completion_status"] = "incomplete";
+					}else{
+						API_1484_11.datamodel["cmi.completion_status"] = "completed";
+					}
+
+				}else{
+					API_1484_11.datamodel["cmi.completion_status"] = "unknown";
+				}
+			}else{
+				API_1484_11.datamodel["cmi.completion_status"] = lVal;
+			}
+
+			fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+			fResetError();
+			fShowSnapShot();
+			return "true";
+
+
+		}else if (lStr == "cmi.completion_threshold"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.credit"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.entry"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.exit"){
+
+			var lAllowedVoc = new Array();
+			lAllowedVoc[lAllowedVoc.length] = "normal";
+			lAllowedVoc[lAllowedVoc.length] = "time-out";
+			lAllowedVoc[lAllowedVoc.length] = "suspend";
+			lAllowedVoc[lAllowedVoc.length] = "logout";
+			lAllowedVoc[lAllowedVoc.length] = "";
+
+			var bExists = false;
+			for (var i=0;i<lAllowedVoc.length;i++){
+				if (lAllowedVoc[i] == lVal){
+					bExists = true;
+				}
+			}
+
+			if (!bExists){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			if (lVal == "suspend"){
+				API_1484_11.datamodel["cmi.entry"] = "resume";
+			}else{
+				API_1484_11.datamodel["cmi.entry"] = "";
+			}
+
+
+		}else if (lStr == "cmi.interactions._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.interactions._count"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".id") != -1) && (lStr.indexOf(".objectives.")==-1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 4000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (encodeURI(lVal) != lVal){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+
+					if (API_1484_11.datamodel.cmi_interactions[nValue] == undefined){
+						var lObj =  new Object();
+						lObj.id = lVal;
+						API_1484_11.datamodel.cmi_interactions[nValue] = lObj;
+					}else{
+						API_1484_11.datamodel.cmi_interactions[nValue].id = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".type") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var lAllowedVoc = new Array();
+			lAllowedVoc[lAllowedVoc.length] = "true-false";
+			lAllowedVoc[lAllowedVoc.length] = "choice";
+			lAllowedVoc[lAllowedVoc.length] = "fill-in";
+			lAllowedVoc[lAllowedVoc.length] = "long-fill-in";
+			lAllowedVoc[lAllowedVoc.length] = "matching";
+			lAllowedVoc[lAllowedVoc.length] = "performance";
+			lAllowedVoc[lAllowedVoc.length] = "sequencing";
+			lAllowedVoc[lAllowedVoc.length] = "likert";
+			lAllowedVoc[lAllowedVoc.length] = "numeric";
+			lAllowedVoc[lAllowedVoc.length] = "other";
+
+			var bExists = false;
+			for (var i=0;i<lAllowedVoc.length;i++){
+				if (lAllowedVoc[i] == lVal){
+					bExists = true;
+				}
+			}
+
+			if (!bExists){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						API_1484_11.datamodel.cmi_interactions[nValue].type = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".objectives._count") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.interactions.") != -1) && (lStr.indexOf(".objectives.") != -1) && (lStr.indexOf(".id") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 4000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (encodeURI(lVal) != lVal){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var nValue2 = lStr.split(".")[4];
+					if (isNaN(nValue2)){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+						gStrLastErrorNum = "406";
+						return "false";
+					}else{
+						if (API_1484_11.datamodel.cmi_interactions[nValue].objectives == undefined){
+							API_1484_11.datamodel.cmi_interactions[nValue].objectives = new Array();
+						}
+						nValue2 = Number(nValue2);
+						if (nValue2 > API_1484_11.datamodel.cmi_interactions[nValue].objectives.length){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+							gStrLastErrorNum = "351";
+							return "false";
+						}else{
+							if (API_1484_11.datamodel.cmi_interactions[nValue].objectives[nValue2] == undefined){
+								var lObj =  new Object();
+								lObj.id = lVal;
+								API_1484_11.datamodel.cmi_interactions[nValue].objectives[nValue2] = lObj;
+							}else{
+								API_1484_11.datamodel.cmi_interactions[nValue].objectives[nValue2].id = lVal;
+							}
+							fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+							fResetError();
+							fShowSnapShot();
+							return "true";
+						}
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".timestamp") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						API_1484_11.datamodel.cmi_interactions[nValue].timestamp = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".correct_responses._count") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.interactions.") != -1) && (lStr.indexOf(".correct_responses.") != -1) && (lStr.indexOf(".pattern") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var nValue2 = lStr.split(".")[4];
+					if (isNaN(nValue2)){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+						gStrLastErrorNum = "406";
+						return "false";
+					}else{
+						var int_id = "notset";
+						var int_type = "notset";
+						try {
+							int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+							int_type = API_1484_11.datamodel.cmi_interactions[nValue].type;
+						}catch(err) {}
+
+						if ((int_id == "notset")||(int_type == "notset")){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+							gStrLastErrorNum = "408";
+							return "false";
+						}else{
+
+							var patternIsValid = false;
+							if (int_type == "true_false"){
+								if ((lVal == "true")||(lVal == "false")){
+									patternIsValid = true;
+								}
+							}else if (int_type == "choice"){
+								if (lVal == ""){
+									patternIsValid = true;
+								}else{
+									var arrayValSplit = lVal.split("[,]")
+									if (hasDuplicates(arrayValSplit)){
+										patternIsValid = false;
+									}else{
+										var bOKpValid = true;
+										for (var a=0;a<arrayValSplit.length;a++){
+											if (arrayValSplit[a].length>250){
+												bOKpValid = false;
+												break;
+											}else if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+												bOKpValid = false;
+												break;
+											}
+										}
+										if (bOKpValid){
+											patternIsValid = true;
+										}
+									}
+								}
+							}else if (int_type == "fill-in"){
+								patternIsValid = true;
+							}else if (int_type == "long-fill-in"){
+								patternIsValid = true;
+							}else if (int_type == "matching"){
+								var arrayValSplit = lVal.split("[,]")
+								var bOKpValid = true;
+								for (var a=0;a<arrayValSplit.length;a++){
+									if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+										bOKpValid = false;
+										break;
+									}
+								}
+								if (bOKpValid){
+									patternIsValid = true;
+								}
+							}else if (int_type == "performance"){
+								patternIsValid = true;
+							}else if (int_type == "sequencing"){
+								if (lVal == ""){
+									patternIsValid = true;
+								}else{
+									var arrayValSplit = lVal.split("[,]")
+									var bOKpValid = true;
+									for (var a=0;a<arrayValSplit.length;a++){
+										if (arrayValSplit[a].length>250){
+											bOKpValid = false;
+											break;
+										}else if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+											bOKpValid = false;
+											break;
+										}
+									}
+									if (bOKpValid){
+										patternIsValid = true;
+									}
+								}
+
+							}else if (int_type == "likert"){
+								var bOKpValid = true;
+								if (lVal.length>250){
+									bOKpValid = false;
+								}else if (encodeURI(lVal) != lVal){
+									bOKpValid = false;
+								}
+								if (bOKpValid){
+									patternIsValid = true;
+								}
+							}else if (int_type == "numeric"){
+								var bOKpValid = true;
+								if (lVal.indexOf("[:]") == -1){
+									bOKpValid = false;
+								}else{
+									var arrayValSplit = lVal.split("[:]")
+									for (var a=0;a<arrayValSplit.length;a++){
+										if (arrayValSplit[a] != ""){
+											if (isNaN(arrayValSplit[a])){
+												bOKpValid = false;
+												break;
+											}
+										}
+									}
+								}
+								if (bOKpValid){
+									patternIsValid = true;
+								}
+
+							}else if (int_type == "other"){
+								if (lVal.length<=4000){
+									patternIsValid = true;
+								}
+							}
+
+							if (!patternIsValid){
+								fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+								gStrLastErrorNum = "406";
+								return "false";
+							}else{
+
+								if (API_1484_11.datamodel.cmi_interactions[nValue].correct_responses == undefined){
+									API_1484_11.datamodel.cmi_interactions[nValue].correct_responses = new Array();
+								}
+								nValue2 = Number(nValue2);
+								if (nValue2 > API_1484_11.datamodel.cmi_interactions[nValue].correct_responses.length){
+									fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+									gStrLastErrorNum = "351";
+									return "false";
+								}else{
+									if (API_1484_11.datamodel.cmi_interactions[nValue].correct_responses[nValue2] == undefined){
+										var lObj =  new Object();
+										lObj.pattern = lVal;
+										API_1484_11.datamodel.cmi_interactions[nValue].correct_responses[nValue2] = lObj;
+									}else{
+										API_1484_11.datamodel.cmi_interactions[nValue].correct_responses[nValue2].pattern = lVal;
+									}
+									fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+									fResetError();
+									fShowSnapShot();
+									return "true";
+								}
+
+							}
+
+						}
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".weighting") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (isNaN(lVal)){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+							gStrLastErrorNum = "406";
+							return "false";
+						}else{
+							API_1484_11.datamodel.cmi_interactions[nValue].weighting = lVal;
+						}
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".learner_response") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					var int_type = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+						int_type = API_1484_11.datamodel.cmi_interactions[nValue].type;
+					}catch(err) {}
+					if ((int_id == "notset")||(int_type == "notset")){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						var patternIsValid = false;
+						if (int_type == "true_false"){
+							if ((lVal == "true")||(lVal == "false")){
+								patternIsValid = true;
+							}
+						}else if (int_type == "choice"){
+							if (lVal == ""){
+								patternIsValid = true;
+							}else{
+								var arrayValSplit = lVal.split("[,]")
+								if (hasDuplicates(arrayValSplit)){
+									patternIsValid = false;
+								}else{
+									var bOKpValid = true;
+									for (var a=0;a<arrayValSplit.length;a++){
+										if (arrayValSplit[a].length>250){
+											bOKpValid = false;
+											break;
+										}else if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+											bOKpValid = false;
+											break;
+										}
+									}
+									if (bOKpValid){
+										patternIsValid = true;
+									}
+								}
+							}
+						}else if (int_type == "fill-in"){
+							patternIsValid = true;
+						}else if (int_type == "long-fill-in"){
+							patternIsValid = true;
+						}else if (int_type == "matching"){
+							var arrayValSplit = lVal.split("[,]")
+							var bOKpValid = true;
+							for (var a=0;a<arrayValSplit.length;a++){
+								if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+									bOKpValid = false;
+									break;
+								}
+							}
+							if (bOKpValid){
+								patternIsValid = true;
+							}
+						}else if (int_type == "performance"){
+							patternIsValid = true;
+						}else if (int_type == "sequencing"){
+							if (lVal == ""){
+								patternIsValid = true;
+							}else{
+								var arrayValSplit = lVal.split("[,]")
+								var bOKpValid = true;
+								for (var a=0;a<arrayValSplit.length;a++){
+									if (arrayValSplit[a].length>250){
+										bOKpValid = false;
+										break;
+									}else if (encodeURI(arrayValSplit[a]) != arrayValSplit[a]){
+										bOKpValid = false;
+										break;
+									}
+								}
+								if (bOKpValid){
+									patternIsValid = true;
+								}
+							}
+
+						}else if (int_type == "likert"){
+							var bOKpValid = true;
+							if (lVal.length>250){
+								bOKpValid = false;
+							}else if (encodeURI(lVal) != lVal){
+								bOKpValid = false;
+							}
+							if (bOKpValid){
+								patternIsValid = true;
+							}
+						}else if (int_type == "numeric"){
+							var bOKpValid = true;
+							if (isNaN(lVal)){
+								bOKpValid = false;
+							}
+							if (bOKpValid){
+								patternIsValid = true;
+							}
+						}else if (int_type == "other"){
+							if (lVal.length<=4000){
+								patternIsValid = true;
+							}
+						}
+
+						if (!patternIsValid){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+							gStrLastErrorNum = "406";
+							return "false";
+						}else{
+							API_1484_11.datamodel.cmi_interactions[nValue].learner_response = lVal;
+							fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+							fResetError();
+							fShowSnapShot();
+							return "true";
+						}
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".result") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (isNaN(lVal)){
+							if ((lVal == "correct")||(lVal == "incorrect")||(lVal == "unanticipated")||(lVal == "neutral")){
+								API_1484_11.datamodel.cmi_interactions[nValue].result = lVal;
+							}else{
+								fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+								gStrLastErrorNum = "406";
+								return "false";
+							}
+						}else{
+							API_1484_11.datamodel.cmi_interactions[nValue].result = lVal;
+						}
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".latency") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (isNaN(lVal)){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+							gStrLastErrorNum = "406";
+							return "false";
+						}else{
+							API_1484_11.datamodel.cmi_interactions[nValue].latency = lVal;
+						}
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".description") != -1)){
+			var lValForSPM = lVal;
+			if(typeof(lVal)=="string"){
+				if (lVal.indexOf("{lang=") != -1){
+					lValCBArr = lVal.split("}");
+					lValForSPMArr = new Array();
+					for (var k=1;k<lValCBArr.length;k++){
+						lValForSPMArr.push(lValCBArr[k])
+					}
+					lValForSPM = lValForSPMArr.join("}")
+				}
+			}
+
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lValForSPM.length > 250){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var int_id = "notset";
+					try {
+						int_id = API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}catch(err) {}
+					if (int_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						API_1484_11.datamodel.cmi_interactions[nValue].description = lVal;
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if (lStr == "cmi.launch_data"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.learner_id"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.learner_name"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.learner_preference._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.learner_preference.audio_level"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if (lVal < 0){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+		}else if (lStr == "cmi.learner_preference.language"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 250){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+		}else if (lStr == "cmi.learner_preference.delivery_speed"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if (lVal < 0){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+		}else if (lStr == "cmi.learner_preference.audio_captioning"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				if ((lVal == "-1")||(lVal == "0")||(lVal == "1")){
+				}else{
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+					gStrLastErrorNum = "406";
+					return "false";
+				}
+			}
+
+		}else if (lStr == "cmi.location"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 1000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+		}else if (lStr == "cmi.max_time_allowed"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.mode"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.objectives._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.objectives._count"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".id") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 4000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (encodeURI(lVal) != lVal){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+
+					for (var a=0;a<API_1484_11.datamodel.cmi_objectives.length;a++){
+						if (API_1484_11.datamodel.cmi_objectives[a].id == lVal){
+							if (a != nValue){
+								fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+								gStrLastErrorNum = "351";
+								return "false";
+							}
+						}
+					}
+
+					if (API_1484_11.datamodel.cmi_objectives[nValue] == undefined){
+						var lObj =  new Object();
+						lObj.id = lVal;
+						API_1484_11.datamodel.cmi_objectives[nValue] = lObj;
+					}else{
+						if (lVal != API_1484_11.datamodel.cmi_objectives[nValue].id){
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+							gStrLastErrorNum = "351";
+							return "false";
+						}else{
+							API_1484_11.datamodel.cmi_objectives[nValue].id = lVal;
+						}
+					}
+					fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+					fResetError();
+					fShowSnapShot();
+					return "true";
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score._children") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.scaled") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if ((lVal < -1)||(lVal > 1)){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+							var lObj =  new Object();
+							lObj.scaled = lVal;
+							API_1484_11.datamodel.cmi_objectives[nValue].score = lObj;
+						}else{
+							API_1484_11.datamodel.cmi_objectives[nValue].score.scaled = lVal;
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.raw") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+							var lObj =  new Object();
+							lObj.raw = lVal;
+							API_1484_11.datamodel.cmi_objectives[nValue].score = lObj;
+						}else{
+							API_1484_11.datamodel.cmi_objectives[nValue].score.raw = lVal;
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.min") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+							var lObj =  new Object();
+							lObj.min = lVal;
+							API_1484_11.datamodel.cmi_objectives[nValue].score = lObj;
+						}else{
+							API_1484_11.datamodel.cmi_objectives[nValue].score.min = lVal;
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.max") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+							var lObj =  new Object();
+							lObj.max = lVal;
+							API_1484_11.datamodel.cmi_objectives[nValue].score = lObj;
+						}else{
+							API_1484_11.datamodel.cmi_objectives[nValue].score.max = lVal;
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".success_status") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if ((lVal == "passed")||(lVal == "failed")||(lVal == "unknown")){
+							API_1484_11.datamodel.cmi_objectives[nValue].success_status = lVal;
+						}else{
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+							gStrLastErrorNum = "406";
+							return "false";
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".completion_status") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						if ((lVal == "completed")||(lVal == "incomplete")||(lVal == "not attempted")||(lVal == "unknown")){
+							API_1484_11.datamodel.cmi_objectives[nValue].completion_status = lVal;
+						}else{
+							fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+							gStrLastErrorNum = "406";
+							return "false";
+						}
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".progress_measure") != -1)){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if ((lVal < 0)||(lVal > 1)){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						API_1484_11.datamodel.cmi_objectives[nValue].progress_measure = lVal;
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".description") != -1)){
+
+			var lValForSPM = lVal;
+			if(typeof(lVal)=="string"){
+				if (lVal.indexOf("{lang=") != -1){
+					lValCBArr = lVal.split("}");
+					lValForSPMArr = new Array();
+					for (var k=1;k<lValCBArr.length;k++){
+						lValForSPMArr.push(lValCBArr[k])
+					}
+					lValForSPM = lValForSPMArr.join("}")
+				}
+			}
+
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lValForSPM.length > 250){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue > API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+					gStrLastErrorNum = "351";
+					return "false";
+				}else{
+					var obj_id = "notset";
+					try {
+						obj_id = API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}catch(err) {}
+					if (obj_id == "notset"){
+						fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '408|Data Model Dependency Not Established');
+						gStrLastErrorNum = "408";
+						return "false";
+					}else{
+						API_1484_11.datamodel.cmi_objectives[nValue].description = lVal;
+						fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+						fResetError();
+						fShowSnapShot();
+						return "true";
+					}
+				}
+			}
+		}else if (lStr == "cmi.progress_measure"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if ((lVal < 0)||(lVal > 1)){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+
+			API_1484_11.datamodel["cmi.progress_measure"] = lVal;
+
+			if (API_1484_11.datamodel["cmi.completion_threshold"] != ""){
+				if ( Number(API_1484_11.datamodel["cmi.completion_threshold"]) > Number(API_1484_11.datamodel["cmi.progress_measure"])){
+					API_1484_11.datamodel["cmi.completion_status"] = "incomplete";
+				}else{
+					API_1484_11.datamodel["cmi.completion_status"] = "completed";
+				}
+			}
+
+			fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+			fResetError();
+			fShowSnapShot();
+			return "true";
+
+
+		}else if (lStr == "cmi.scaled_passing_score"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.score._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.score.scaled"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				lVal = Number(lVal);
+				if ((lVal < -1)||(lVal > 1)){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '407|Data Model Element Value Out Of Range');
+					gStrLastErrorNum = "407";
+					return "false";
+				}
+			}
+
+			API_1484_11.datamodel["cmi.score.scaled"] = lVal;
+
+			if (API_1484_11.datamodel["cmi.scaled_passing_score"] != ""){
+				if ( Number(API_1484_11.datamodel["cmi.scaled_passing_score"]) > Number(API_1484_11.datamodel["cmi.score.scaled"])){
+					API_1484_11.datamodel["cmi.success_status"] = "failed";
+				}else{
+					API_1484_11.datamodel["cmi.success_status"] = "passed";
+				}
+			}
+
+			fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+			fResetError();
+			fShowSnapShot();
+			return "true";
+
+
+		}else if (lStr == "cmi.score.raw"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+		}else if (lStr == "cmi.score.max"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+		}else if (lStr == "cmi.score.min"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal == ""){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (isNaN(lVal)){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+		}else if (lStr == "cmi.session_time"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.indexOf("P") != 0){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				var s_t_anyNumberUsed = false;
+				var s_t_chars = lVal.split('');
+				var s_t_timestarted = false;
+
+				var s_t_Years = "";
+				var s_t_Months = "";
+				var s_t_Days = "";
+				var s_t_Hours = "";
+				var s_t_Mins = "";
+				var s_t_Secs = "";
+
+				var s_t_Numbers = "";
+				for (var c=1;c<s_t_chars.length;c++){
+					if ( isNaN(s_t_chars[c]) ){
+						if (s_t_chars[c] == "."){
+							s_t_Numbers += s_t_chars[c];
+						}else if (s_t_chars[c] == "T"){
+							s_t_timestarted = true;
+						}else if (s_t_timestarted){
+							if (s_t_chars[c] == "H"){
+								s_t_Hours += s_t_Numbers;
+							}
+							if (s_t_chars[c] == "M"){
+								s_t_Mins += s_t_Numbers;
+							}
+							if (s_t_chars[c] == "S"){
+								s_t_Secs += s_t_Numbers;
+							}
+							s_t_Numbers = "";
+						}else{
+							if (s_t_chars[c] == "Y"){
+								s_t_Years += s_t_Numbers;
+							}
+							if (s_t_chars[c] == "M"){
+								s_t_Months += s_t_Numbers;
+							}
+							if (s_t_chars[c] == "D"){
+								s_t_Days += s_t_Numbers;
+							}
+							s_t_Numbers = "";
+						}
+
+					}else{
+						s_t_Numbers += s_t_chars[c];
+						s_t_anyNumberUsed = true;
+					}
+				}
+				if (!s_t_anyNumberUsed){
+					fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+					gStrLastErrorNum = "406";
+					return "false";
+				}else{
+					var s_t_calculatedTime = 0;
+					if (s_t_Years != ""){
+						s_t_calculatedTime += Number(s_t_Years)*365*24*60*60*1000
+					}
+					if (s_t_Months != ""){
+						s_t_calculatedTime += Number(s_t_Months)*30*24*60*60*1000
+					}
+					if (s_t_Days != ""){
+						s_t_calculatedTime += Number(s_t_Days)*24*60*60*1000
+					}
+					if (s_t_Hours != ""){
+						s_t_calculatedTime += Number(s_t_Hours)*60*60*1000
+					}
+					if (s_t_Mins != ""){
+						s_t_calculatedTime += Number(s_t_Mins)*60*1000
+					}
+					if (s_t_Secs != ""){
+						s_t_calculatedTime += Number(s_t_Secs)*1000
+					}
+
+					API_1484_11.datamodel.cmi_session_time_calculated = s_t_calculatedTime;
+
+				}
+			}
+
+		}else if (lStr == "cmi.success_status"){
+			var lAllowedVoc = new Array();
+			lAllowedVoc[lAllowedVoc.length] = "passed";
+			lAllowedVoc[lAllowedVoc.length] = "failed";
+			lAllowedVoc[lAllowedVoc.length] = "unknown";
+
+			var bExists = false;
+			for (var i=0;i<lAllowedVoc.length;i++){
+				if (lAllowedVoc[i] == lVal){
+					bExists = true;
+				}
+			}
+
+			if (!bExists){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+			if (API_1484_11.datamodel["cmi.scaled_passing_score"] != ""){
+				if (API_1484_11.datamodel["cmi.score.scaled"] != ""){
+
+					if ( Number(API_1484_11.datamodel["cmi.scaled_passing_score"]) > Number(API_1484_11.datamodel["cmi.score.scaled"])){
+						API_1484_11.datamodel["cmi.success_status"] = "failed";
+					}else{
+						API_1484_11.datamodel["cmi.success_status"] = "passed";
+					}
+
+				}else{
+					API_1484_11.datamodel["cmi.success_status"] = "unknown";
+				}
+			}else{
+				API_1484_11.datamodel["cmi.success_status"] = lVal;
+			}
+
+			fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+			fResetError();
+			fShowSnapShot();
+			return "true";
+
+
+		}else if (lStr == "cmi.suspend_data"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else if (lVal.length > 64000){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+
+		}else if (lStr == "cmi.time_limit_action"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "cmi.total_time"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "adl.data._children"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "adl.data._count"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("adl.data") != -1) && (lStr.indexOf(".id") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if ((lStr.indexOf("adl.data") != -1) && (lStr.indexOf(".store") != -1)){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '351|General Set Failure');
+			gStrLastErrorNum = "351";
+			return "false";
+		}else if (lStr == "adl.nav.request"){
+			if(typeof(lVal)!="string"){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+			var bExists = false;
+			if ((lVal == "continue")||(lVal == "previous")||(lVal == "exit")||(lVal == "exitAll")||(lVal == "abandon")||(lVal == "abandonAll")||(lVal == "suspendAll")||(lVal == "_none_")){
+				bExists = true;
+			}else if (lVal.indexOf("choice") != -1){
+				bExists = true;
+			}else if (lVal.indexOf("jump") != -1){
+				bExists = true;
+			}
+			if (!bExists){
+				fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}
+		}else if (lStr == "adl.nav.request_valid.continue"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr == "adl.nav.request_valid.previous"){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr.indexOf("adl.nav.request_valid.choice.") != -1){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else if (lStr.indexOf("adl.nav.request_valid.jump.") != -1){
+			fErrorOccured('SetValue("' + lStr + '","' + lVal + '") - ' + '404|Data Model Element Is Read Only');
+			gStrLastErrorNum = "404";
+			return "false";
+		}else{
+			fWarningCall('SetValue("' + lStr + '","' + lVal + '") - ' + '401|Undefined Data Model Element');
+			gStrLastErrorNum = "401";
+			return "false";
+		}
+
+		fNormalCall('SetValue("' + lStr + '","' + lVal + '")');
+
+		API_1484_11.datamodel[lStr] = lVal;
+
+		fResetError();
+
+		fShowSnapShot();
+
+		return "true";
+	}
+	API_1484_11.GetValue = function(lStr){
+
+		if (!gLMSInitializeCalled){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '122|Retrieve Data Before Initialization');
+			gStrLastErrorNum = "122";
+			return "";
+		}
+
+		if (gLMSFinishCalled){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '123|Retrieve Data After Termination');
+			gStrLastErrorNum = "123";
+			return "";
+		}
+
+		if (lStr == "cmi._version"){
+
+		}else if (lStr == "cmi.comments_from_learner._children"){
+
+		}else if (lStr == "cmi.comments_from_learner._count"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return (API_1484_11.datamodel.cmi_comments_from_learner.length + "");
+
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.lastIndexOf(".comment") > 10)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue].comment == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_comments_from_learner[nValue].comment;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.indexOf(".location") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue].location == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_comments_from_learner[nValue].location;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.comments_from_learner") != -1) && (lStr.indexOf(".timestamp") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_comments_from_learner.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_comments_from_learner[nValue].timestamp == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_comments_from_learner[nValue].timestamp;
+					}
+				}
+			}
+		}else if (lStr == "cmi.comments_from_lms._children"){
+
+		}else if (lStr == "cmi.comments_from_lms._count"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return ("0");
+
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.lastIndexOf(".comment") > 10)){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+			gStrLastErrorNum = "301";
+			return "";
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.indexOf(".location") != -1)){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+			gStrLastErrorNum = "301";
+			return "";
+		}else if ((lStr.indexOf("cmi.comments_from_lms") != -1) && (lStr.indexOf(".timestamp") != -1)){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+			gStrLastErrorNum = "301";
+			return "";
+		}else if (lStr == "cmi.completion_status"){
+
+		}else if (lStr == "cmi.completion_threshold"){
+			if (API_1484_11.datamodel["cmi.completion_threshold"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.credit"){
+
+		}else if (lStr == "cmi.entry"){
+
+		}else if (lStr == "cmi.exit"){
+			fWarningCall('GetValue("' + lStr + '") - ' + '405|Data Model Element Is Write Only');
+			gStrLastErrorNum = "405";
+			return "false";
+
+		}else if (lStr == "cmi.interactions._children"){
+
+		}else if (lStr == "cmi.interactions._count"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return (API_1484_11.datamodel.cmi_interactions.length + "");
+
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".id") != -1) && (lStr.indexOf(".objectives.")==-1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].id == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].id;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".type") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].type == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].type;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".objectives._count") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].objectives == undefined){
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return "0";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].objectives.length;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions.") != -1) && (lStr.indexOf(".objectives.") != -1) && (lStr.indexOf(".id") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					var nValue2 = lStr.split(".")[4];
+					if (isNaN(nValue2)){
+						fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+						gStrLastErrorNum = "406";
+						return "false";
+					}else{
+						nValue2 = Number(nValue2);
+						if (nValue2 > API_1484_11.datamodel.cmi_interactions[nValue].objectives.length){
+							fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+							gStrLastErrorNum = "301";
+							return "false";
+						}else{
+							if (API_1484_11.datamodel.cmi_interactions[nValue].objectives[nValue2].id == undefined){
+								fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+								gStrLastErrorNum = "403";
+								return "";
+							}else{
+								fNormalCall('GetValue("' + lStr + '")');
+								fResetError();
+								return API_1484_11.datamodel.cmi_interactions[nValue].objectives[nValue2].id;
+							}
+						}
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".timestamp") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].timestamp == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].timestamp;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".correct_responses._count") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].correct_responses == undefined){
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return "0";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].correct_responses.length;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions.") != -1) && (lStr.indexOf(".correct_responses.") != -1) && (lStr.indexOf(".pattern") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					var nValue2 = lStr.split(".")[4];
+					if (isNaN(nValue2)){
+						fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+						gStrLastErrorNum = "406";
+						return "false";
+
+					}else{
+						nValue2 = Number(nValue2);
+						if (nValue2 > API_1484_11.datamodel.cmi_interactions[nValue].correct_responses.length){
+							fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+							gStrLastErrorNum = "301";
+							return "false";
+						}else{
+							if (API_1484_11.datamodel.cmi_interactions[nValue].correct_responses[nValue2].pattern == undefined){
+								fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+								gStrLastErrorNum = "403";
+								return "";
+							}else{
+								fNormalCall('GetValue("' + lStr + '")');
+								fResetError();
+								return API_1484_11.datamodel.cmi_interactions[nValue].correct_responses[nValue2].pattern;
+							}
+						}
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".weighting") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].weighting == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].weighting;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".learner_response") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].learner_response == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].learner_response;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".result") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].result == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].result;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".latency") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].latency == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].latency;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.interactions") != -1) && (lStr.indexOf(".description") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_interactions.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_interactions[nValue].description == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_interactions[nValue].description;
+					}
+				}
+			}
+		}else if (lStr == "cmi.launch_data"){
+			if (API_1484_11.datamodel["cmi.launch_data"] == "svtdefault"){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.learner_id"){
+
+		}else if (lStr == "cmi.learner_name"){
+
+		}else if (lStr == "cmi.learner_preference._children"){
+
+		}else if (lStr == "cmi.learner_preference.audio_level"){
+
+		}else if (lStr == "cmi.learner_preference.language"){
+
+		}else if (lStr == "cmi.learner_preference.delivery_speed"){
+
+		}else if (lStr == "cmi.learner_preference.audio_captioning"){
+
+		}else if (lStr == "cmi.location"){
+			if (API_1484_11.datamodel["cmi.location"] == "svtdefault"){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.max_time_allowed"){
+			if (API_1484_11.datamodel["cmi.max_time_allowed"] == "svtdefault"){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.mode"){
+
+		}else if (lStr == "cmi.objectives._children"){
+
+		}else if (lStr == "cmi.objectives._count"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return (API_1484_11.datamodel.cmi_objectives.length + "");
+
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".id") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].id == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].id;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score._children") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "";
+				}else{
+					fNormalCall('GetValue("' + lStr + '")');
+					fResetError();
+					return "scaled,raw,min,max";
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.scaled") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else if (API_1484_11.datamodel.cmi_objectives[nValue].score.scaled == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].score.scaled;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.raw") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else if (API_1484_11.datamodel.cmi_objectives[nValue].score.raw == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].score.raw;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.min") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else if (API_1484_11.datamodel.cmi_objectives[nValue].score.min == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].score.min;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".score.max") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].score == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else if (API_1484_11.datamodel.cmi_objectives[nValue].score.max == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].score.max;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".success_status") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].success_status == undefined){
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return "unknown";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].success_status;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".completion_status") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].completion_status == undefined){
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return "unknown";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].completion_status;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".progress_measure") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].progress_measure == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].progress_measure;
+					}
+				}
+			}
+		}else if ((lStr.indexOf("cmi.objectives") != -1) && (lStr.indexOf(".description") != -1)){
+			var nValue = lStr.split(".")[2];
+			if (isNaN(nValue)){
+				fErrorOccured('GetValue("' + lStr + '") - ' + '406|Data Model Element Type Mismatch');
+				gStrLastErrorNum = "406";
+				return "false";
+			}else{
+				nValue = Number(nValue);
+				if (nValue >= API_1484_11.datamodel.cmi_objectives.length){
+					fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+					gStrLastErrorNum = "301";
+					return "false";
+				}else{
+					if (API_1484_11.datamodel.cmi_objectives[nValue].description == undefined){
+						fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+						gStrLastErrorNum = "403";
+						return "";
+					}else{
+						fNormalCall('GetValue("' + lStr + '")');
+						fResetError();
+						return API_1484_11.datamodel.cmi_objectives[nValue].description;
+					}
+				}
+			}
+		}else if (lStr == "cmi.progress_measure"){
+			if (API_1484_11.datamodel["cmi.max_time_allowed"] == "svtdefault"){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.scaled_passing_score"){
+			if (API_1484_11.datamodel["cmi.scaled_passing_score"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.score._children"){
+
+		}else if (lStr == "cmi.score.scaled"){
+			if (API_1484_11.datamodel["cmi.score.scaled"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.score.raw"){
+			if (API_1484_11.datamodel["cmi.score.raw"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.score.max"){
+			if (API_1484_11.datamodel["cmi.score.max"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.score.min"){
+			if (API_1484_11.datamodel["cmi.score.min"] == ""){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.session_time"){
+			fWarningCall('GetValue("' + lStr + '") - ' + '405|Data Model Element Is Write Only');
+			gStrLastErrorNum = "405";
+			return "false";
+		}else if (lStr == "cmi.success_status"){
+
+		}else if (lStr == "cmi.suspend_data"){
+			if (API_1484_11.datamodel["cmi.suspend_data"] == "svtdefault"){
+				fWarningCall('GetValue("' + lStr + '") - ' + '403|Data Model Element Value Not Initialized');
+				gStrLastErrorNum = "403";
+				return "";
+			}
+		}else if (lStr == "cmi.time_limit_action"){
+
+		}else if (lStr == "cmi.total_time"){
+
+		}else if (lStr == "adl.data._children"){
+
+		}else if (lStr == "adl.data._count"){
+
+		}else if ((lStr.indexOf("adl.data") != -1) && (lStr.indexOf(".id") != -1)){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+			gStrLastErrorNum = "301";
+			return "false";
+		}else if ((lStr.indexOf("adl.data") != -1) && (lStr.indexOf(".store") != -1)){
+			fErrorOccured('GetValue("' + lStr + '") - ' + '301|General Get Failure');
+			gStrLastErrorNum = "301";
+			return "false";
+		}else if (lStr == "adl.nav.request"){
+		}else if (lStr == "adl.nav.request_valid.continue"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return "false";
+		}else if (lStr == "adl.nav.request_valid.previous"){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return "false";
+		}else if (lStr.indexOf("adl.nav.request_valid.choice.") != -1){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return "false";
+		}else if (lStr.indexOf("adl.nav.request_valid.jump.") != -1){
+			fNormalCall('GetValue("' + lStr + '")');
+			fResetError();
+			return "false";
+		}else{
+			fWarningCall('GetValue("' + lStr + '") - ' + '401|Undefined Data Model Element');
+			gStrLastErrorNum = "401";
+			return "false";
+		}
+		fNormalCall('GetValue("' + lStr + '")');
+		fResetError();
+		return API_1484_11.datamodel[lStr];
+	}
+	API_1484_11.Commit = function(lStr){
+
+		if (!gLMSInitializeCalled){
+			fErrorOccured('Commit() - ' + '142|Commit Before Initialization');
+			gStrLastErrorNum = "142";
+			return "false";
+		}
+
+		if (gLMSFinishCalled){
+			fErrorOccured('Commit() - ' + '143|Commit After Termination');
+			gStrLastErrorNum = "143";
+			return "false";
+		}
+
+		if (lStr != ""){
+			fErrorOccured('Commit() - ' + '201|General Argument Error');
+			gStrLastErrorNum = "201";
+			return "false";
+		}
+		fNormalCall('Commit("' + lStr + '")');
+		fResetError();
+		return "true";
+	}
+	API_1484_11.Terminate = function(lStr){
+
+		if (!gLMSInitializeCalled){
+
+			fErrorOccured('Terminate("' + lStr + '") - ' + '112|Termination Before Initialization');
+			gStrLastErrorNum = "112";
+			return "false";
+		}
+
+
+		if (gLMSFinishCalled){
+			fErrorOccured('Terminate("' + lStr + '") - ' + '113|Termination After Termination');
+			gStrLastErrorNum = "113";
+			return "false";
+		}
+
+		if (lStr != ""){
+			fErrorOccured('Terminate("' + lStr + '") - ' + '201|General Argument Error');
+			gStrLastErrorNum = "201";
+			return "false";
+		}
+
+		API_1484_11.datamodel["cmi.learner_preference.audio_level"] = "1";
+		API_1484_11.datamodel["cmi.learner_preference.language"] = "";
+		API_1484_11.datamodel["cmi.learner_preference.delivery_speed"] = "";
+		API_1484_11.datamodel["cmi.learner_preference.audio_captioning"] = "0";
+		API_1484_11.datamodel.cmi_session_time_overall += API_1484_11.datamodel.cmi_session_time_calculated;
+
+		// Save data back to LMS
+
+		gLMSFinishCalled = true;
+
+		fNormalCall('Terminate("' + lStr + '")<br>');
+		fResetError();
+		return "true";
+	}
+	API_1484_11.GetLastError = function(){
+
+		if (gLMSFinishCalled){
+			fErrorOccured("Terminate already called")
+			return "false";
+		}
+		fNormalCall('GetLastError()');
+		return gStrLastErrorNum;
+	}
+
+	API_1484_11.GetErrorString = function(lStr){
+
+		if (gLMSFinishCalled){
+			fErrorOccured("Terminate already called")
+			return "false";
+		}
+
+		fNormalCall('GetErrorString("' + lStr + '")');
+
+		for (var i=0;i<errorCodes.length;i++){
+			if (errorCodes[i].errCode == lStr){
+				return errorCodes[i].errDesc;
+			}
+		}
+
+		return "";
+	}
+
+	API_1484_11.GetDiagnostic = function(lStr){
+
+		if (gLMSFinishCalled){
+			fErrorOccured("Terminate already called")
+			return "false";
+		}
+
+		fNormalCall('GetDiagnostic("' + lStr + '")');
+
+		if (lStr == ""){
+			lStr = gStrLastErrorNum;
+		}
+
+		for (var i=0;i<errorCodes.length;i++){
+			if (errorCodes[i].errCode == lStr){
+				return errorCodes[i].errDesc;
+			}
+		}
+
+		return "";
+	}
+
+
+
+</script>
+</head>
+<frameset id="stFrameSet" rows="25%,75%">
+	<frame src="ScormTesterFrame.html" id="frmScormLog" name="frmScormLog">
+	<frame src="about:blank" id="frmContent" name="frmContent">
+</frameset>
+</html>
